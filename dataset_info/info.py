@@ -1,10 +1,31 @@
-import os as _os
-import experiments.registration.rcommon as rcommon
+import os
 _ibsr_base_dir = 'Unspecified'
 _lpba_base_dir = 'Unspecified'
 _brainweb_base_dir = 'Unspecified'
 _scil_base_dir = 'Unspecified'
 _neobrain_base_dir = 'Unspecified'
+
+def getBaseFileName(fname):
+    base=os.path.basename(fname)
+    noExt=os.path.splitext(base)[0]
+    while(noExt!=base):
+        base=noExt
+        noExt=os.path.splitext(base)[0]
+    return noExt
+
+
+def decompose_path(fname):
+    dirname=os.path.dirname(fname)
+    if len(dirname)>0:
+        dirname += '/'
+
+    base=os.path.basename(fname)
+    no_ext = os.path.splitext(base)[0]
+    while(no_ext !=base):
+        base=no_ext
+        no_ext =os.path.splitext(base)[0]
+    ext = os.path.basename(fname)[len(no_ext):]
+    return dirname, base, ext
 
 def _load_dataset_info():
     r""" Loads the dataset location in the local file system
@@ -16,21 +37,21 @@ def _load_dataset_info():
     3. Brainweb
     4. SCIL
     5. Neobrain
-    
+
     For example:
         /home/myusername/data/IBSR/
         /home/myusername/data/LPBA/
         /home/myusername/data/Brainweb/
         /home/myusername/data/SCIL/
         /home/myusername/data/DATA_NeoBrainS12/
-        
+
     this module expects exactly 5 nonempty lines, if any of the datasets is not
     available, please add an 'dummy' path
 
     """
-    dirname, base, ext = rcommon.decompose_path(__file__)
+    dirname, base, ext = decompose_path(__file__)
     fname = dirname + base + '.txt'
-    if _os.path.isfile(fname):
+    if os.path.isfile(fname):
         with open(fname) as f:
             lines = [s.strip() for s in f.readlines()]
             if len(lines) != 5:
@@ -140,7 +161,7 @@ def get_scil(idx, data):
     fname = prefix + data + '.nii.gz'
     return fname
 
-    
+
 def get_neobrain(subset, vol_id, modality):
     r"""
     Parameters
@@ -170,7 +191,7 @@ def get_neobrain(subset, vol_id, modality):
             `modality` must be any of 'T1', 'T2', 'seg'
         if `subset` == 'test':
             `modality` must be the suffix of the requested file, it consists
-            of two strings separated by underscore as follows: 
+            of two strings separated by underscore as follows:
             [i1|i2|i3|iC1|iC2]_[t1|t2]
     """
     neobrain_base_dir = get_neobrain_base_dir()
@@ -212,4 +233,4 @@ def get_neobrain(subset, vol_id, modality):
     else:
         raise ValueError('Unknown dataset %s'%(subset,))
 
-    
+
