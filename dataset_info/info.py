@@ -204,30 +204,30 @@ def get_neobrain(subset, vol_id, modality):
             raise ValueError('Unknown training modality.')
 
         if vol_id == 1:
-            return neobrain_base_dir + 'trainingDataNeoBrainS12/30wCoronal/example1/' + prefix + '.nii'
+            return neobrain_base_dir + 'trainingDataNeoBrainS12/30wCoronal/example1/' + prefix + '.nii.gz'
         elif vol_id == 2:
-            return neobrain_base_dir + 'trainingDataNeoBrainS12/30wCoronal/example2/' + prefix + '.nii'
+            return neobrain_base_dir + 'trainingDataNeoBrainS12/30wCoronal/example2/' + prefix + '.nii.gz'
         elif vol_id == 3:
-            return neobrain_base_dir + 'trainingDataNeoBrainS12/40wAxial/example3/' + prefix + '.nii'
+            return neobrain_base_dir + 'trainingDataNeoBrainS12/40wAxial/example3/' + prefix + '.nii.gz'
         elif vol_id == 4:
-            return neobrain_base_dir + 'trainingDataNeoBrainS12/40wAxial/example4/' + prefix + '.nii'
+            return neobrain_base_dir + 'trainingDataNeoBrainS12/40wAxial/example4/' + prefix + '.nii.gz'
         else:
             raise ValueError('Unknown training volume identifier. Expecte integer in [1, 4]')
     elif subset == 'test':
         if isinstance(modality, str):
             if vol_id == 1:
-                return neobrain_base_dir + 'scans_axial_40/set1_' + modality + '.nii'
+                return neobrain_base_dir + 'scans_axial_40/set1_' + modality + '.nii.gz'
             elif vol_id == 2:
-                return neobrain_base_dir + 'scans_cor_30/set2_' + modality + '.nii'
+                return neobrain_base_dir + 'scans_cor_30/set2_' + modality + '.nii.gz'
             elif vol_id == 3:
-                return neobrain_base_dir + 'scans_cor_40/set3_' + modality + '.nii'
+                return neobrain_base_dir + 'scans_cor_40/set3_' + modality + '.nii.gz'
             else:
                 raise ValueError('Unknown training volume identifier. Expecte integer in [1, 3]')
         else:
             raise ValueError('Unknown testing modality specifier. Expected string with format [i1|i2|i3|iC1|iC2]_[t1|t2]')
     elif subset == 'atlas':
         if isinstance(vol_id,str):
-            return neobrain_base_dir + 'atlas/infant-' + vol_id + '.nii'
+            return neobrain_base_dir + 'atlas/infant-' + vol_id + '.nii.gz'
         else:
             raise ValueError('Unknown atlas volume identifier.')
     else:
