@@ -227,7 +227,7 @@ def get_neobrain(subset, vol_id, modality):
             raise ValueError('Unknown testing modality specifier. Expected string with format [i1|i2|i3|iC1|iC2]_[t1|t2]')
     elif subset == 'atlas':
         if isinstance(vol_id,str):
-            return neobrain_base_dir + 'atlas/infant-' + vol_id + '.nii.gz'
+            return neobrain_base_dir + 'UNCInfant012Atlas/infant-' + vol_id + '.nii.gz'
         else:
             raise ValueError('Unknown atlas volume identifier.')
     else:
