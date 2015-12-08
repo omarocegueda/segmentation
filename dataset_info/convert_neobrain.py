@@ -4,11 +4,14 @@ import pickle
 import numpy as np
 import nibabel as nib
 import dipy.viz.regtools as rt
+from dipy.align.metrics import CCMetric
+from dipy.align.imwarp import SymmetricDiffeomorphicRegistration
 from dipy.align import VerbosityLevels
 from dipy.align.transforms import regtransforms
 from dipy.align.imaffine import (AffineMap,
                                  transform_centers_of_mass,
                                  MutualInformationMetric,
+                                 LocalCCMetric,
                                  AffineRegistration)
 # Our modules
 from dataset_info.info import get_neobrain
@@ -144,7 +147,7 @@ def convert_all():
 
 
 def dipy_align(static, static_grid2world, moving, moving_grid2world,
-               transforms=None, prealign=None):
+               transforms=None, level_iters=None, prealign=None):
     r''' Full rigid registration with Dipy's imaffine module
 
     Here we implement an extra optimization heuristic: move the geometric
@@ -169,9 +172,7 @@ def dipy_align(static, static_grid2world, moving, moving_grid2world,
 
     dim = len(static.shape)
     metric = MutualInformationMetric(nbins=32, sampling_proportion=0.3)
-    level_iters = [10000, 1000, 100]
-    affr = AffineRegistration(metric=metric, level_iters=level_iters)
-    affr.verbosity = VerbosityLevels.DEBUG
+    #metric = LocalCCMetric(radius=4)
     #metric.verbosity = VerbosityLevels.DEBUG
 
     # Registration schedule: center-of-mass then translation, then rigid and then affine
@@ -180,9 +181,18 @@ def dipy_align(static, static_grid2world, moving, moving_grid2world,
 
     if transforms is None:
         transforms = ['TRANSLATION', 'RIGID', 'AFFINE']
+    
+    nlevels = len(transforms)
+    if level_iters is None:
+        level_iters = [[10000, 1000, 100]] * nlevels
 
     sol = np.eye(dim + 1)
-    for transform_name in transforms:
+    for i in range(nlevels):
+        transform_name = transforms[i]
+        affr = AffineRegistration(metric=metric, level_iters=level_iters[i])
+        affr.verbosity = VerbosityLevels.DEBUG        
+        
+        
         transform = regtransforms[(transform_name, dim)]
         print('Optimizing: %s'%(transform_name,))
         x0 = None
@@ -320,9 +330,6 @@ def align_atlas():
     atlas_wcerebellum_affine = atlas_wcerebellum_nib.get_affine()
 
     # Configure diffeomorphic registration
-    from dipy.align.metrics import CCMetric
-    from dipy.align.imwarp import SymmetricDiffeomorphicRegistration
-
     diff_map_name = 'atlas_towards_neo1_diff.p'
     if os.path.isfile(diff_map_name):
         diff_map = pickle.load(open(diff_map_name, 'r'))
@@ -344,3 +351,81 @@ def align_atlas():
     # Before and after diffeomorphic registration
     rt.overlay_slices(neo, atlas_resampled, slice_type=2, slice_index=40, ltitle='Neo1', rtitle='Atlas');
     rt.overlay_slices(neo, atlas_wcerebellum_deformed, slice_type=2, slice_index=40, ltitle='Neo1', rtitle='Atlas');
+    
+    
+    
+    
+    # Now all volumes
+    atlas_fname = get_neobrain('atlas', 'neo-withSkull', None)
+    atlas_nib = nib.load(atlas_fname)
+    atlas = atlas_nib.get_data()
+    atlas_affine = atlas_nib.get_affine()
+    
+    atlas_wcerebellum_fname = get_neobrain('atlas', 'neo-withCerebellum', None)
+    atlas_wcerebellum_nib = nib.load(atlas_wcerebellum_fname)
+    atlas_wcerebellum = atlas_wcerebellum_nib.get_data()
+    atlas_wcerebellum_affine = atlas_wcerebellum_nib.get_affine()
+    
+    
+    
+    
+    
+    idx = 2
+    neoi_fname = get_neobrain('train', idx, 'T2')
+    neoi_nib = nib.load(neoi_fname)
+    neoi = neoi_nib.get_data()
+    neoi_affine = neoi_nib.get_affine()
+    
+    iso_scale = (float(7*9*11)/float(5*5*8))**(1.0/3)
+    print(iso_scale)
+    
+
+    #We can use this to constraint the transformation to rigid
+    scale = np.eye(4)
+    scale[:3,:3] *= iso_scale
+
+    rigid_map_fname = 'atlas_towards_neo%d_affine.p'%(idx,)
+
+    if os.path.isfile(rigid_map_fname):
+        rigid_map = pickle.load(open(rigid_map_fname, 'r'))
+    else:
+        transforms = ['RIGID', 'AFFINE']
+        level_iters = [[10000, 1000, 100], [100]]
+        rigid_map = dipy_align(neoi, neoi_affine, atlas, atlas_affine,
+                               transforms=transforms,
+                               level_iters=level_iters,
+                               prealign=scale)
+        pickle.dump(rigid_map, open(rigid_map_fname, 'w'))
+
+    atlas_resampled = rigid_map.transform(atlas)
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index = 6)
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index = 10)
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index = 25)
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index = 40)
+    
+    diff_map_name = 'atlas_towards_neo%d_diff.p'%(idx,)
+    if os.path.isfile(diff_map_name):
+        diff_map = pickle.load(open(diff_map_name, 'r'))
+    else:
+        metric = CCMetric(3)
+        sdr = SymmetricDiffeomorphicRegistration(metric)
+        # The atlases are not aligned in physical space!! use atlas_affine instead of atlas_wcerebellum_affine
+        diff_map = sdr.optimize(neoi, atlas_wcerebellum, neoi_affine, atlas_affine, prealign=rigid_map.affine)
+        pickle.dump(diff_map, open(diff_map_name, 'w'))
+
+    atlas_wcerebellum_deformed = diff_map.transform(atlas_wcerebellum)
+
+    # Before and after diffeomorphic registration
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index=6, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    rt.overlay_slices(neoi, atlas_wcerebellum_deformed, slice_type=2, slice_index=6, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index=10, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    rt.overlay_slices(neoi, atlas_wcerebellum_deformed, slice_type=2, slice_index=10, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    # Before and after diffeomorphic registration
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index=25, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    rt.overlay_slices(neoi, atlas_wcerebellum_deformed, slice_type=2, slice_index=25, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    # Before and after diffeomorphic registration
+    rt.overlay_slices(neoi, atlas_resampled, slice_type=2, slice_index=40, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    rt.overlay_slices(neoi, atlas_wcerebellum_deformed, slice_type=2, slice_index=40, ltitle='Neo%d'%(idx,), rtitle='Atlas');
+    
+    
