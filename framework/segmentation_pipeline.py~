@@ -107,7 +107,7 @@ dim2 = t2CurrentSubject_data.shape[1]
 dim3 = t2CurrentSubject_data.shape[2]
 
 
-# 2 - Intracranial Cavity Extraction
+# 2 - Intracraneal Cavity Extraction
 
 #   apply atlas head mask
 for i in xrange(0,dim1):
@@ -212,7 +212,7 @@ ICEMask = watershed(segFuncGOT2,markersICE)
 del segFuncGOT2
 del markersICE
 ICEMask = dilation(ICEMask,ball(1))
-#   Apply Inctracranial Cavity Extraction with segmented watershed mask
+#   Apply Inctracraneal Cavity Extraction with segmented watershed mask
 for x in xrange(0,dim1):
   for y in xrange(0,dim2):
     for z in xrange(0,dim3):
@@ -691,7 +691,7 @@ denSMCSF = 0
 denGTGM  = 0
 denGTWM  = 0
 denGTCSF = 0
-#wVoxel   = int(round(float(dim3)/float(GT_data.shape[2])))
+wVoxel   = int(round(float(dim3)/float(GT_data.shape[2])))
 
 for i in xrange(20,dim1-20):
  for j in xrange(20,dim2-20):
@@ -699,30 +699,29 @@ for i in xrange(20,dim1-20):
    if GT_data[i,j,k] <> 6 and GT_data[i,j,k] <> 5 and GT_data[i,j,k]<>4 :
      k1 = int(round(float(dim3*k)/float(GT_data.shape[2])))
      # decide voxel value on third dimension based on voting scheme
-     #GMVotes  = 0
-     #WMVotes  = 0
-     #CSFVotes = 0
-     #segValue = 0
-     #for k2 in xrange(0,wVoxel):
-     #   ind = k1 + k2
-     #   if ind < dim3 :
-     #      if SegMap[i,j,ind] == 85 :
-     #         GMVotes = GMVotes + 1
-     #      elif SegMap[i,j,ind] == 255 :
-     #         CSFVotes = CSFVotes + 1
-     #      else:
-     #         if SegMap[i,j,ind] == 190 :
-     #            WMVotes = WMVotes + 1
-     #maxVoted = max(max(GMVotes,CSFVotes),WMVotes)
-     #if maxVoted == 0 :
-     #   segValue = 0
-     #elif maxVoted == GMVotes :
-     #   segValue = 85
-     #elif maxVoted == CSFVotes :
-     #   segValue = 255
-     #else :
-     #   segValue = 190
-     segValue = SegMap[i,j,k1]
+     GMVotes  = 0
+     WMVotes  = 0
+     CSFVotes = 0
+     segValue = 0
+     for k2 in xrange(0,wVoxel):
+        ind = k1 + k2
+        if ind < dim3 :
+           if SegMap[i,j,ind] == 85 :
+              GMVotes = GMVotes + 1
+           elif SegMap[i,j,ind] == 255 :
+              CSFVotes = CSFVotes + 1
+           else:
+              if SegMap[i,j,ind] == 190 :
+                 WMVotes = WMVotes + 1
+     maxVoted = max(max(GMVotes,CSFVotes),WMVotes)
+     if maxVoted == 0 :
+        segValue = 0
+     elif maxVoted == GMVotes :
+        segValue = 85
+     elif maxVoted == CSFVotes :
+        segValue = 255
+     else :
+        segValue = 190
      
      if segValue == 85 :
         denSMGM  = denSMGM + 1
