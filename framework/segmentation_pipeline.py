@@ -13,6 +13,7 @@ from skimage.filters import threshold_otsu
 from skimage.restoration import denoise_bilateral
 from scipy.stats.stats import pearsonr
 from dipy.align.reslice import reslice
+import scipy.ndimage as ndimage
 
 # Normalize intensity values to the range [0,scaleVal]
 # Input:  data numpy array with the intensity values to normalize and
@@ -25,10 +26,11 @@ def NormalizeIntensity(data,scaleVal):
    return data
 
 
-
+#base_dir = '/home/omar/data/DATA_NeoBrainS12/'
 base_dir    = '/home/dalmau/opt/imagenes/data_NeoBrainS12/'
 neo_subject = '30wCoronal/example2/'
 results_dir = '/home/dalmau/opt/segmentation/framework/segmentation_pipeline_output/example2_30wCoronal/'
+#results_dir = '/home/omar/opt/segmentation/framework/segmentation_pipeline_output/example2_30wCoronal/'
 atlas_label = '28w'
 
 # Read subject files
@@ -110,11 +112,12 @@ dim3 = t2CurrentSubject_data.shape[2]
 # 2 - Intracranial Cavity Extraction
 
 #   apply atlas head mask
-for i in xrange(0,dim1):
-  for j in xrange(0,dim2):
-   for k in xrange(0,dim3):
-      if AMask_data[i,j,k] == 0 :
-        t2CurrentSubject_data[i,j,k] = 0
+t2CurrentSubject_data[AMask_data == 0] = 0
+#for i in xrange(0,dim1):
+#  for j in xrange(0,dim2):
+#   for k in xrange(0,dim3):
+#      if AMask_data[i,j,k] == 0 :
+#        t2CurrentSubject_data[i,j,k] = 0
 
 nSlice = int(dim3 / 2)
 difSlice = 12
@@ -165,19 +168,24 @@ del gradientOT2
 #maskT2 = np.array(maskT2,dtype=float)
 
 #   Obtain gravity center of mask of T2
-C = np.zeros(3)
-maskT2Count = 0
-for x in xrange(0,dim1):
-  for y in xrange(0,dim2):
-    for z in xrange(0,dim3):
-       #if maskT2[x,y,z] > 0 :
-       if t2CurrentSubject_data[x,y,z] > 0 :
-          maskT2Count = maskT2Count + 1
-          C[0] = C[0] + x
-          C[1] = C[1] + y
-          C[2] = C[2] + z
+current_mask = (t2CurrentSubject_data>0).astype(np.int32)
 
-C = C / float(maskT2Count)
+C = ndimage.measurements.center_of_mass(current_mask)
+maskT2Count = np.sum(current_mask)
+
+#C = np.zeros(3)
+#maskT2Count = 0
+#for x in xrange(0,dim1):
+#  for y in xrange(0,dim2):
+#    for z in xrange(0,dim3):
+#       #if maskT2[x,y,z] > 0 :
+#       if t2CurrentSubject_data[x,y,z] > 0 :
+#          maskT2Count = maskT2Count + 1
+#          C[0] = C[0] + x
+#          C[1] = C[1] + y
+#          C[2] = C[2] + z
+
+#C = C / float(maskT2Count)
 print "Centroid = {}".format(C)
 
 #   set two class of markers (for marker based watershed segmentation)
@@ -213,12 +221,14 @@ del segFuncGOT2
 del markersICE
 ICEMask = dilation(ICEMask,ball(1))
 #   Apply Inctracranial Cavity Extraction with segmented watershed mask
-for x in xrange(0,dim1):
-  for y in xrange(0,dim2):
-    for z in xrange(0,dim3):
-       if ICEMask[x,y,z] == 1 :
-          t2CurrentSubject_data[x,y,z] = 0
-          t1CurrentSubject_data[x,y,z] = 0
+t2CurrentSubject_data[ICEMask == 1] = 0
+t1CurrentSubject_data[ICEMask == 1] = 0
+#for x in xrange(0,dim1):
+#  for y in xrange(0,dim2):
+#    for z in xrange(0,dim3):
+#       if ICEMask[x,y,z] == 1 :
+#          t2CurrentSubject_data[x,y,z] = 0
+#          t1CurrentSubject_data[x,y,z] = 0
 
 #   show a sample resulting slice
 
@@ -312,8 +322,17 @@ del ICEMask
 #del lsClosingT2
 
 #   sum of increasing scale closings of T2
+# Note (JOOG): the running time increases with the size of the structuring
+# element (which is "flat" in this case), by any chance do you know what is the
+# complexity of the algorithm implemented in scikit image?. It appears to me
+# that there should be a faster way of doing this, don't you think Oscar,
+# Ulises? According to this:
+# http://www.ee.lamar.edu/gleb/dip/10-3%20-%20Morphological%20Image%20Processing.pdf
+# erosion just picks the minimum value of the input image within the
+# structuring element. And dilation takes the maximum.
 sumClosingT2 = closing(t2CurrentSubject_data,ball(0))
 for r in xrange(1,11):
+   print("Iter: ",r)
    sumClosingT2 = sumClosingT2 + closing(t2CurrentSubject_data,ball(r))
 
 print "closing 1-10 done."
@@ -640,7 +659,7 @@ for i in xrange(20,dim1-20):
  for j in xrange(20,dim2-20):
   for k in xrange(20,dim3-20):
     val = t2CurrentSubject_data[i,j,k]
-    if val >0 : 
+    if val >0 :
        if WLCC[i,j,k] == 255 or labels[ind] == csfLab :
           val1 = 0
        else :
@@ -723,7 +742,7 @@ for i in xrange(20,dim1-20):
      #else :
      #   segValue = 190
      segValue = SegMap[i,j,k1]
-     
+
      if segValue == 85 :
         denSMGM  = denSMGM + 1
      elif segValue == 255 :
