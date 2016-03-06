@@ -1,0 +1,6 @@
+/home/dalmau/opt/imagenes/data_NeoBrainS12/
+30wCoronal/example2/
+/home/dalmau/opt/segmentation/framework/segmentation_pipeline_output/example2_30wCoronal/
+28w
+trainingDataNeoBrainS12/
+
