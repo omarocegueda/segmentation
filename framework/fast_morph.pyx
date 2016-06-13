@@ -42,7 +42,6 @@ def create_sphere(cnp.npy_intp nslices, cnp.npy_intp nrows,
     r"""
     Create a binary 3D image where voxel values are 1 iff their distance
     to the center of the image is less than or equal to radius.
-
     Parameters
     ----------
     nslices : int
@@ -53,7 +52,6 @@ def create_sphere(cnp.npy_intp nslices, cnp.npy_intp nrows,
         number of columns of the resulting image
     radius : int
         the radius of the sphere
-
     Returns
     -------
     c : array, shape (nslices, nrows, ncols)
@@ -149,7 +147,6 @@ def get_list(int[:,:,:] mask, int radius):
 def get_subsphere_lists(int r, int R):
     ''' Obtains the set of voxels of the radius R sphere that are not covered
     by the set of displaced sub-spheres of radius r
-
     Return
     ------
         bcenters : array, shape(7, 3)

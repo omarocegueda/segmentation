@@ -1,0 +1,6 @@
+/home/dalmau/opt/imagenes/data_NeoBrainS12/
+challenge_01/
+/home/dalmau/opt/segmentation/framework/segmentation_pipeline_output/challenge_01/
+scans_cor_30/
+NeonatalAtlas2/
+
